@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y2JB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        oled: {
+                            base: '#000000',
+                            surface: '#121212',
+                            border: '#2a2a2a',
+                        },
+                        brand: {
+                            blue: '#00439c', 
+                            light: '#0070d1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background-color: #555; border-radius: 10px; }
+        
+        html.dark body { background-color: #000000; color: #e5e5e5; }
+        html.dark .surface { background-color: #121212; border-color: #2a2a2a; }
+        html.dark .input-field { background-color: #000000; border-color: #333; color: white; }
+        
+        html:not(.dark) body { background-color: #f3f4f6; color: #111827; }
+        html:not(.dark) .surface { background-color: #ffffff; border-color: #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        html:not(.dark) .input-field { background-color: #f9fafb; border-color: #d1d5db; color: #111827; }
+    </style>
+    <script src="{{ url_for('static', filename='color_mode.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='updater.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='direct.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='index.js') }}" defer></script>
+</head>
+
+<body class="font-sans antialiased min-h-screen flex flex-col transition-colors duration-300">
+
+    <nav class="w-full border-b surface transition-colors duration-300 sticky top-0 z-50 border-b">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <i class="fa-brands fa-playstation text-3xl"></i>
+                    <span class="font-bold text-xl tracking-tight">Y2JB</span>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <button id="update-btn" onclick="UpdateY2JB()" class="text-sm font-medium opacity-60 hover:opacity-100 transition-opacity flex items-center gap-2 px-3 py-1.5 rounded-full">
+                        <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                        <span>Update Core</span>
+                    </button>
+
+                    <button onclick="toggleTheme()" class="w-10 h-10 rounded-full flex items-center justify-center surface border transition-all hover:scale-105 active:scale-95">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-8 space-y-8">
+        
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="surface border rounded-2xl p-6 transition-colors duration-300">
+                <h3 class="text-sm font-semibold opacity-50 uppercase tracking-wider mb-4">Connection</h3>
+                
+                <div class="space-y-5">
+                    <div class="relative">
+                        <input type="text" name="IP" id="IP" placeholder="PS5 IP Address" 
+                            class="input-field block w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-brand-light focus:border-transparent outline-none transition-all font-mono"
+                            onchange="saveIP()">
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium">Auto-Jailbreak</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="AJB-B" class="sr-only peer" onclick="saveAJB()">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-blue"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col">
+                <button id="SJB" class="flex-1 w-full bg-brand-blue hover:bg-brand-light text-white font-bold text-2xl rounded-2xl shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center tracking-widest uppercase">
+                    Jailbreak
+                </button>
+            </div>
+        </section>
+
+        <section class="surface border rounded-2xl p-6 transition-colors duration-300 flex flex-col min-h-[500px]">
+            <div class="flex flex-col xl:flex-row items-center justify-between mb-6 gap-4">
+                <h3 class="text-lg font-bold">Payloads</h3>
+                
+                <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                    <div class="flex gap-2 w-full sm:w-auto">
+                         <input type="text" id="directUrlInput" placeholder="URL (.bin/.elf)" class="input-field flex-1 sm:w-64 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-brand-light outline-none transition-all">
+                         <button onclick="directDownload()" class="px-3 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-brand-blue hover:text-white rounded-lg text-xs font-bold transition-colors border border-transparent hover:border-brand-blue" title="Download from URL">
+                             <i class="fa-solid fa-cloud-arrow-down"></i>
+                         </button>
+                    </div>
+
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <input type="file" id="fileInput" accept=".bin,.elf" class="hidden">
+                        <button onclick="document.getElementById('fileInput').click()" class="flex-1 sm:flex-none px-4 py-2 input-field border rounded-lg text-sm font-medium hover:opacity-80 transition-opacity">
+                            Select File
+                        </button>
+                        <button id="UPB" onclick="uploadPayload()" class="px-6 py-2 bg-brand-blue hover:bg-brand-light text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-900/20">
+                            Upload
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="uploadStatus" class="text-xs text-center sm:text-right h-4 mb-2 opacity-70 transition-all"></div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll -mr-2 pr-2">
+                <ul id="PL" class="grid grid-cols-1 gap-3">
+                    </ul>
+                
+                <div id="empty-state" class="hidden h-full flex flex-col items-center justify-center opacity-30 py-20">
+                    <i class="fa-regular fa-folder-open text-6xl mb-4"></i>
+                    <p>No payloads available</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>
