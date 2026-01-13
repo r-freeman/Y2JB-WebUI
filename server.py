@@ -1,9 +1,12 @@
 import fnmatch
-from flask import Flask, render_template_string, request, redirect, url_for, flash, jsonify
+import json
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 from SendPayload import send_payload
+from src.delete_payload import handle_delete_payload
+from src.download_payload import handle_url_download
 import time
 import threading
 import requests
@@ -13,10 +16,29 @@ app.secret_key = 'Nazky'
 CORS(app)
 
 PAYLOAD_DIR = "payloads"
+CONFIG_DIR = "config"
+CONFIG_FILE = os.path.join(CONFIG_DIR, "settings.json")
 ALLOWED_EXTENSIONS = {'bin', 'elf'}
 url = "http://localhost:8000/send_payload"
 
 os.makedirs(PAYLOAD_DIR, exist_ok=True)
+os.makedirs(CONFIG_DIR, exist_ok=True)
+os.makedirs('templates', exist_ok=True)
+
+def get_config():
+    if not os.path.exists(CONFIG_FILE):
+        return {"ajb": "false", "ip": ""}
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {"ajb": "false", "ip": ""}
+
+def update_config(key, value):
+    config = get_config()
+    config[key] = str(value)
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4)
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -29,42 +51,29 @@ def secure_filename(filename):
 def check_ajb():
     while True:
         try:
-            if not os.path.exists("AJB.txt"):
-                print("AJB.txt not found - waiting...")
-                time.sleep(5)
-                continue
+            config = get_config()
+            ajb_content = config.get("ajb", "false").lower()
 
-            with open("AJB.txt", "r") as file:
-                content = file.read().strip().lower()
+            print("Auto-Jailbreak:", ajb_content)
 
-                print("Auto-Jailbreak:", content)
+            if ajb_content == "true":
+                ip_address = config.get("ip", "").strip()
 
-                if content == "true":
-                    if not os.path.exists("IP.txt"):
-                        print("IP.txt not found")
-                        time.sleep(5)
-                        continue
+                if not ip_address:
+                    print("Empty IP in settings")
+                else:
+                    print("IP:", ip_address)
 
-                    with open("IP.txt", "r") as ip_file:
-                        ip_address = ip_file.read().strip()
+                    response = requests.post(url, json={
+                        "IP": ip_address,
+                        "payload": ""
+                    })
 
-                        if not ip_address:
-                            print("Empty IP in file")
-                        else:
-                            print("IP:", ip_address)
+                    if response.status_code == 200:
+                        print("Payload sent successfully")
+                    else:
+                        print("Error sending payload:", response.text)
 
-                            response = requests.post(url, json={
-                                "IP": ip_address,
-                                "payload": ""
-                            })
-
-                            if response.status_code == 200:
-                                print("Payload sent successfully")
-                            else:
-                                print("Error sending payload:", response.text())
-
-        except FileNotFoundError as e:
-            print("File not found:", str(e))
         except Exception as e:
             print("Error:", str(e))
 
@@ -73,23 +82,19 @@ def check_ajb():
 
 @app.route("/")
 def home():
-    with open('index.html', 'r') as f:
-        html_content = f.read()
-    return render_template_string(html_content)
+    return render_template('index.html')
 
 @app.route('/edit_ajb', methods=['POST'])
 def edit_ajb():
     new_content = request.json.get('content')
-    with open('AJB.txt', 'w') as f:
-        f.write(new_content)
-    return "File updated!"
+    update_config("ajb", new_content)
+    return "Settings updated!"
 
 @app.route('/edit_ip', methods=['POST'])
 def edit_ip():
     new_content = request.json.get('content')
-    with open('IP.txt', 'w') as f:
-        f.write(new_content)
-    return "File updated!"
+    update_config("ip", new_content)
+    return "Settings updated!"
 
 @app.route('/list_payloads')
 def list_files():
@@ -126,6 +131,17 @@ def upload_payload():
             return jsonify({'error': str(e)}), 500
 
     return jsonify({'error': 'File type not allowed'}), 400
+
+@app.route('/download_payload_url', methods=['POST'])
+def download_payload_url():
+    try:
+        data = request.get_json()
+        url = data.get('url')
+        response, status_code = handle_url_download(url, PAYLOAD_DIR, ALLOWED_EXTENSIONS)
+        return jsonify(response), status_code
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/send_payload", methods=["POST"])
 def sending_payload():
@@ -165,37 +181,8 @@ def sending_payload():
 def delete_payload():
     try:
         data = request.get_json()
-        payload = data.get("payload")
-        if not payload:
-            return jsonify({
-                'error': 'filename parameter is required'
-            }), 400
-
-        if '..' in payload or '/' in payload or '\\' in payload:
-            return jsonify({
-                'error': 'Invalid filename'
-            }), 400
-
-        file_extension = payload.rsplit('.', 1)[-1].lower()
-        if file_extension not in ALLOWED_EXTENSIONS:
-            return jsonify({
-                'error': f'File type {file_extension} not allowed'
-            }), 400
-
-        filepath = os.path.join(PAYLOAD_DIR, payload)
-
-        if os.path.exists(filepath) and os.path.isfile(filepath):
-            os.remove(filepath)
-            return jsonify({
-                'success': True,
-                'message': f'File {payload} deleted successfully',
-                'filename': payload
-            })
-        else:
-            return jsonify({
-                'error': 'File not found',
-                'filename': payload
-            }), 404
+        response, status_code = handle_delete_payload(data, PAYLOAD_DIR, ALLOWED_EXTENSIONS)
+        return jsonify(response), status_code
 
     except Exception as e:
         return jsonify({
