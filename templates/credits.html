@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y2JB - Credits</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        oled: { base: '#000000', surface: '#121212', border: '#2a2a2a' },
+                        brand: { blue: '#00439c', light: '#0070d1' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/credits.css') }}">
+    <script src="{{ url_for('static', filename='credits.js') }}" defer></script>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col p-6 max-w-4xl mx-auto transition-colors duration-300">
+
+    <header class="flex items-center gap-4 mb-8 animate-fade-in">
+        <a href="/" class="surface border w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-all hover:scale-105 active:scale-95 text-brand-light">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div>
+            <h1 class="text-2xl font-bold">Credits</h1>
+            <p class="text-xs opacity-50 uppercase tracking-widest font-medium">Community & Developers</p>
+        </div>
+    </header>
+
+    <main>
+        <div id="credits-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            </div>
+
+        <footer class="mt-12 text-center opacity-40 text-xs">
+            <p>Y2JB-WebUI</p>
+        </footer>
+    </main>
+
+</body>
+</html>

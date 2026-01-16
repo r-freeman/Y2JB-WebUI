@@ -280,6 +280,10 @@ def remove_repo():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/credits')
+def credits_page():
+    return render_template('credits.html')
+
 if __name__ == "__main__":
     threading.Thread(target=check_ajb, daemon=True).start()
     app.run(host="0.0.0.0", port=8000 ,debug=False)
