@@ -1,5 +1,6 @@
 import fnmatch
 import json
+import logging
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename as werkzeug_secure_filename
@@ -12,6 +13,7 @@ from src.ps5_utils import auto_replace_download0, patch_blocker
 import time
 import threading
 import requests
+import socket
 
 app = Flask(__name__)
 app.secret_key = 'Nazky'
@@ -21,6 +23,7 @@ PAYLOAD_DIR = "payloads"
 DAT_DIR = "payloads/dat"
 CONFIG_DIR = "static/config"
 CONFIG_FILE = os.path.join(CONFIG_DIR, "settings.json")
+PAYLOAD_CONFIG_FILE = os.path.join(CONFIG_DIR, "payload_config.json")
 ALLOWED_EXTENSIONS = {'bin', 'elf', 'js', 'dat'}
 url = "http://localhost:8000/send_payload"
 
@@ -32,6 +35,19 @@ os.makedirs('templates', exist_ok=True)
 if not os.path.exists(CONFIG_FILE):
     with open(CONFIG_FILE, 'w') as f:
         json.dump({"ajb": "false", "ip": ""}, f)
+
+def get_payload_config():
+    if not os.path.exists(PAYLOAD_CONFIG_FILE):
+        return {}
+    try:
+        with open(PAYLOAD_CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_payload_config(config):
+    with open(PAYLOAD_CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4)
 
 def get_config():
     if not os.path.exists(CONFIG_FILE):
@@ -62,15 +78,13 @@ def check_ajb():
             config = get_config()
             ajb_content = config.get("ajb", "false").lower()
 
-            print("Auto-Jailbreak:", ajb_content)
 
             if ajb_content == "true":
                 ip_address = config.get("ip", "").strip()
 
                 if not ip_address:
-                    print("Empty IP in settings")
+                    print("[AJB] Enabled but IP missing")
                 else:
-                    print("IP:", ip_address)
 
                     response = requests.post(url, json={
                         "IP": ip_address,
@@ -78,12 +92,12 @@ def check_ajb():
                     })
 
                     if response.status_code == 200:
-                        print("Payloads sent successfully")
+                        print("[AJB] Sequence completed successfully")
                     else:
-                        print("Error sending payload:", response.text)
+                        print(f"[AJB] Error: {response.text}")
 
         except Exception as e:
-            print("Error:", str(e))
+            print("[AJB] Error:", str(e))
 
         finally:
             time.sleep(5)
@@ -91,6 +105,28 @@ def check_ajb():
 @app.route("/")
 def home():
     return render_template('index.html')
+
+@app.route('/api/payload_config', methods=['GET'])
+def get_payload_config_route():
+    return jsonify(get_payload_config())
+
+@app.route('/api/payload_config/toggle', methods=['POST'])
+def toggle_payload_config():
+    try:
+        data = request.json
+        filename = data.get('filename')
+        enabled = data.get('enabled')
+        
+        if not filename:
+            return jsonify({"error": "Missing filename"}), 400
+            
+        config = get_payload_config()
+        config[filename] = enabled
+        save_payload_config(config)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/edit_ajb', methods=['POST'])
 def edit_ajb():
@@ -136,6 +172,7 @@ def upload_payload():
 
         try:
             file.save(save_path)
+            print(f"[UPLOAD] Saved {filename}")
             return jsonify({
                 'success': True,
                 'filename': filename,
@@ -151,6 +188,7 @@ def download_payload_url():
     try:
         data = request.get_json()
         url = data.get('url')
+        print(f"[DOWNLOAD] Fetching from {url}...")
         response, status_code = handle_url_download(url, PAYLOAD_DIR, ALLOWED_EXTENSIONS)
         
         if status_code == 200:
@@ -177,18 +215,35 @@ def sending_payload():
         if not host:
             return jsonify({"error": "Missing IP parameter"}), 400
         if not payload:
+            print("--- Starting Auto-Jailbreak Sequence ---")
+            
+            config = get_payload_config()
+
+            print(f"[SEND] lapse.js -> {host}:50000")
             result = send_payload(file_path='payloads/js/lapse.js', host=host, port=50000)
             time.sleep(10)
+            
             if result:
+                print(f"[SEND] kstuff.elf -> {host}:9021")
                 result = send_payload(file_path='payloads/kstuff.elf', host=host, port=9021)
                 time.sleep(10)
+                
                 if result:
                     for filename in os.listdir(PAYLOAD_DIR):
+                        if not config.get(filename, True):
+                            print(f"[SKIP] {filename} (Disabled in settings)")
+                            continue
+
                         if (fnmatch.fnmatch(filename, '*.bin') or fnmatch.fnmatch(filename, '*.elf')) and filename != 'kstuff.elf':
+                            print(f"[SEND] {filename} -> {host}:9021")
                             result = send_payload(file_path=os.path.join(PAYLOAD_DIR,filename), host=host, port=9021)
                             time.sleep(5)
+                            
                             if not result:
+                                print(f"[FAIL] Could not send {filename}")
                                 return jsonify({"error": f"Failed to send {filename}"}), 500
+                    
+                    print("--- Auto-Jailbreak Sequence Complete ---")
                     return jsonify({"success": True, "message": "All payloads sent successfully"})
                 else:
                     return jsonify({"error": "Failed to send kstuff.elf"}), 500
@@ -199,6 +254,7 @@ def sending_payload():
             if payload.lower().endswith('.js'):
                 port = 50000
             
+            print(f"[MANUAL] Sending {payload} -> {host}:{port}")
             result = send_payload(file_path=payload, host=host, port=port)
             
             if result:
@@ -207,12 +263,14 @@ def sending_payload():
                 return jsonify({"error": "Failed to send custom payload"}), 500
 
     except Exception as e:
+        print(f"[ERROR] {str(e)}")
         return jsonify({"error": str(e)}), 500
     
 @app.route('/delete_payload', methods=['POST'])
 def delete_payload():
     try:
         data = request.get_json()
+        print(f"[DELETE] Request: {data}")
         response, status_code = handle_delete_payload(data, PAYLOAD_DIR, ALLOWED_EXTENSIONS)
         return jsonify(response), status_code
 
@@ -237,6 +295,7 @@ def update_repos():
     try:
         data = request.get_json() or {}
         targets = data.get('targets', ['all'])
+        print(f"[REPO] Updating targets: {targets}")
         result = update_payloads(targets)
         return jsonify(result)
     except Exception as e:
@@ -298,6 +357,7 @@ def run_update_download0():
     if not ip:
         return jsonify({"success": False, "message": "IP Address not set"}), 400
 
+    print(f"[TOOL] Installing download0.dat to {ip}...")
     success, message = auto_replace_download0(ip, port)
     
     if success:
@@ -314,6 +374,7 @@ def run_block_updates():
     if not ip:
         return jsonify({"success": False, "message": "IP Address not set"}), 400
 
+    print(f"[TOOL] Blocking updates on {ip}...")
     success, message = patch_blocker(ip, port)
     if success:
         return jsonify({"success": True, "message": message})
@@ -349,6 +410,23 @@ def handle_settings():
             return jsonify({"success": True, "message": "Settings saved successfully"})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/network_info')
+def network_info():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        server_ip = s.getsockname()[0]
+        s.close()
+    except:
+        server_ip = "Unknown"
+    
+    client_ip = request.remote_addr
+    
+    return jsonify({
+        "server_ip": server_ip,
+        "client_ip": client_ip
+    })
 
 if __name__ == "__main__":
     threading.Thread(target=check_ajb, daemon=True).start()

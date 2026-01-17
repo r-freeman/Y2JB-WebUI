@@ -1,6 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     loadsettings();
     loadTheme(); 
+    fetch("/api/network_info")
+        .then(r => r.json())
+        .then(info => {
+            const serverIpEl = document.getElementById("server-ip");
+            const clientIpEl = document.getElementById("client-ip");
+            if (serverIpEl) serverIpEl.textContent = info.server_ip || "Unknown";
+            if (clientIpEl) clientIpEl.textContent = info.client_ip || "Unknown";
+        })
+        .catch(() => {
+            const serverIpEl = document.getElementById("server-ip");
+            const clientIpEl = document.getElementById("client-ip");
+            if (serverIpEl) serverIpEl.textContent = "Unknown";
+            if (clientIpEl) clientIpEl.textContent = "Unknown";
+        });
 });
 
 async function readJSON(filename) {
@@ -269,10 +283,39 @@ async function loadsettings() {
     await loadpayloads();
 }
 
+async function togglePayloadIndex(filename, checkbox) {
+    const enabled = checkbox.checked;
+    
+    const configKey = filename.split('/').pop(); 
+
+    try {
+        const response = await fetch('/api/payload_config/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: configKey, enabled })
+        });
+        
+        if(!response.ok) throw new Error("API Error");
+
+        Toast.show(`${configKey} ${enabled ? 'enabled' : 'disabled'} for autoload`, 'info');
+
+    } catch (e) {
+        console.error(e);
+        Toast.show('Failed to update setting', 'error');
+        checkbox.checked = !enabled;
+    }
+}
+
 async function loadpayloads() {
     try {
-        const response = await fetch('/list_payloads');
-        const files = await response.json();
+        const [filesRes, configRes] = await Promise.all([
+            fetch('/list_payloads'),
+            fetch('/api/payload_config')
+        ]);
+        
+        const files = await filesRes.json();
+        const config = await configRes.json();
+
         const listElement = document.getElementById('PL');
         const countElement = document.getElementById('payload-count');
 
@@ -290,6 +333,9 @@ async function loadpayloads() {
         document.getElementById('empty-state').classList.add('hidden');
 
         files.forEach(file => {
+            const configKey = file.split('/').pop();
+            const isEnabled = config[configKey] !== false && config[file] !== false;
+
             const card = document.createElement('li');
             card.className = "input-field border rounded-xl p-4 flex items-center justify-between group transition-colors hover:border-brand-blue";
             
@@ -304,7 +350,15 @@ async function loadpayloads() {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 border-r pr-3 border-gray-300 dark:border-gray-700" title="Enable Autoload">
+                        <span class="text-[10px] opacity-40 font-bold uppercase hidden sm:inline">Auto</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" onchange="togglePayloadIndex('${file}', this)" ${isEnabled ? 'checked' : ''}>
+                            <div class="w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-brand-blue"></div>
+                        </label>
+                    </div>
+
                     <button onclick="SendPayload('payloads/${file}')" class="px-4 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-brand-blue hover:text-white rounded-lg text-xs font-bold transition-colors">
                         LOAD
                     </button>
