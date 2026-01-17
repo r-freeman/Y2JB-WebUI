@@ -10,9 +10,9 @@ This is a local website that allow you to manage everything related to Y2JB easi
 ### How can i upload a payload ?
 You just have to select (or drag and drop) a payload then click on the "upload a payload" button. **You can also download payloads directly from a URL using the input field next to file selection.** These URL downloads are automatically saved to your Repository Manager for future updates.
 ### How can i send a payload ?
-To send a payload that you have uploaded simply click on the "Load payload" button.
+To send a payload that you have uploaded simply click on the "LOAD" button.
 ### How can i delete a payload ?
-If you want to disable a payload from being load using the youtube app, simply click on the "Delete" button.
+If you want to disable a payload from being load using the youtube app, simply click on the trash icon button.
 ### Why using this and not [Y2JB Autoloader](https://github.com/itsPLK/ps5_y2jb_autoloader) ?
 [Y2JB Autoloader](https://github.com/itsPLK/ps5_y2jb_autoloader) was a inspiration for this project the downside is to use FTP or a USB drive to update any files, with Y2JB-WebUI you can modify everything on the fly, no need to connect to FTP, using a USB drive or even to have the console power on.
 ### Is this project compatible with [Y2JB Autoloader](https://github.com/itsPLK/ps5_y2jb_autoloader) ?
@@ -20,11 +20,11 @@ Well not right now, i maybe fixing that in a next update.
 ### Do i still need to have Y2JB installed on my console ?
 Yes of course, this is not a replacement of [Y2JB](https://github.com/Gezine/Y2JB), make sure to install it first.
 ### How do I update payloads from GitHub?
-Navigate to the **Repository Manager** by clicking the **"Repos"** button in the navigation bar. From there, you can add repositories and update individual payloads using the refresh button next to each entry.
+Navigate to the **Repository Manager** by clicking the **"Repos"** button in the navigation bar. From there, you can add repositories using asset patterns (e.g. `kstuff.elf`) and update individual payloads using the refresh button next to each entry.
 ### Does this work with...
 You need something to host the server (pc, raspeberry pi, phone, ...) once the server is up you can access the WebUI from anything that can display a webpage (Android, IOS, PC, Nintendo Switch, ...).
 ### Can i upload any payload ?
-All accepted files are bin, elf and js files.
+All accepted files are bin, elf, js and dat files.
 
 # How to install
 
@@ -65,10 +65,10 @@ Exemple:
 ```
 http://192.168.0.5:8000
 ```
-<h3 style="color: #ff0000;">⚠️ YOU NEED TO HAVE "kstuff.elf" AND "lapse.js" INSIDE THE "payloads" FOLDER ⚠️</h3>
+<h3 style="color: #ff0000;">⚠️ YOU NEED TO HAVE "kstuff.elf" INSIDE "payloads/" AND "lapse.js" INSIDE "payloads/js/" ⚠️</h3>
 
 ## Configuration
-First make sure to put the IP of you'r console when it's done you can click on the "Start Jailbreak" button.
+First make sure to put the IP of you'r console when it's done you can click on the "Start Jailbreak" button. For the **Update Blocker** and **Download0.dat** tools, ensure you also configure the **FTP Port** (Default is 1337).
 
 <h3 style="color: #ff0000;">⚠️ DO NOT CHECK THE "Auto-Jailbreak" BEFORE PRESSING THE "Start Jailbreak" BUTTON ⚠️</h3>
 
@@ -85,9 +85,17 @@ If you did check the "Auto-Jailbreak" before pressing the "Start Jailbreak" butt
   
 
 ## TODO
-- [ ] Add Y2JB auto update (download0.dat)
-- [ ] Add Y2JB update blocker option (appinfo.db, param.json, app.db)
+- [X] Add Y2JB auto update (download0.dat)
+- [X] Add Y2JB update blocker option (appinfo.db, param.json, app.db)
 - [X] Add repo management (to automaticlly update payloads)
 - [X] Add support to load custom js
 - [X] Add recursive payload scanning
 - [ ] Make it compatible with [ps5_y2jb_autoloader](https://github.com/itsPLK/ps5_y2jb_autoloader) (not sure if it's possible)
+
+## Screenshots
+
+### Main Page
+![Main Page](static/img/1.png)
+
+### Repository Manager
+![Repository Manager](static/img/2.png)
