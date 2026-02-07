@@ -20,7 +20,7 @@ from flask import send_file
 import uuid
 from src.dns_server import DNSServer
 from src.backpork.core import BackporkEngine
-from src.features import setup_logging, run_startup_tasks
+from src.features import setup_logging, run_startup_tasks, get_logs
 
 app = Flask(__name__)
 app.secret_key = 'Nazky'
@@ -791,6 +791,14 @@ def handle_backpork_settings():
 def run_backpork_process():
     data = request.json
     return Response(BackporkEngine.run_process(data), mimetype='text/event-stream')
+
+@app.route('/logs')
+def logs_page():
+    return render_template('logs.html')
+
+@app.route('/api/logs')
+def api_logs():
+    return jsonify({"logs": get_logs()})
 
 if __name__ == "__main__":
     config = get_config()
